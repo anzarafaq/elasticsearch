@@ -82,7 +82,6 @@ print(" response: '%s'" % (res))
 # bulk index the data
 print("bulk indexing...")
 res = es.bulk(index = INDEX_NAME, body = bulk_data, refresh = True)
-import ipdb; ipdb.set_trace()
 
 # sanity check
 res = es.search(index = INDEX_NAME, size=2, body={"query": {"match_all": {}}})

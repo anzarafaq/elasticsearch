@@ -14,7 +14,6 @@ scanResp= es.search(index="products", doc_type="product", body=query, search_typ
 scrollId= scanResp['_scroll_id']
 print scrollId
 
-import ipdb; ipdb.set_trace()
 #response['hits']['hits'][0]['_source']['epid']
 
 response=es.scroll(scroll_id=scrollId, scroll= "10m")
