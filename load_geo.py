@@ -1,4 +1,5 @@
 import csv
+import random
 from elasticsearch import Elasticsearch
 
 ES_HOST = {"host" : "localhost", "port" : 9200}
@@ -6,6 +7,8 @@ INDEX_NAME = 'store'
 TYPE_NAME = 'store'
 ID_FIELD = 'storeid'
 
+#testing pushing some random data to ES
+rd = dict(Venezuela = 1, Spain = 2, USA = 3, Italy = 4, Japan= 5, Syria= 6, Iran=7)
 
 bulk_data = []
 with open('BestBuy.csv', 'rb') as csvfile:
@@ -30,6 +33,8 @@ with open('BestBuy.csv', 'rb') as csvfile:
 		store['postal_code'] = postal_code
 		store['phone'] = ph
 		store['location'] = {'lon': row['longitude'], 'lat': row['latitude']}
+		rk = random.choice(rd.keys())
+		store['otherdata'] = {rk : rd[rk]}
 
 		print store
 		op_dict = {
@@ -69,7 +74,8 @@ request_body = {
 				"state": {"type": "string"},
 				"postal_code": {"type": "string"},
 				"phone": {"type": "string"},
-				"location": {"type": "geo_point"}
+				"location": {"type": "geo_point"},
+				"otherdata": {"type": "object", "enabled" : False}
 			}
 		}
 	}
@@ -82,7 +88,7 @@ print(" response: '%s'" % (res))
 # bulk index the data
 print("bulk indexing...")
 res = es.bulk(index = INDEX_NAME, body = bulk_data, refresh = True)
-import ipdb; ipdb.set_trace()
+#import ipdb; ipdb.set_trace()
 
 # sanity check
 res = es.search(index = INDEX_NAME, size=2, body={"query": {"match_all": {}}})
