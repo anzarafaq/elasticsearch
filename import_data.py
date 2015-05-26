@@ -17,6 +17,21 @@ TYPE_NAME = 'place'
 ID_FIELD = 'placeid'
 
 
+IMAGES_BASE = os.path.join('/Users/mafaq/Dropbox/', 'SnugabugPhotos')
+
+def find_images(city, placeid):
+    image_path = ":%s/:%s:%s/" %(city, city, placeid)
+    complete_image_path = os.path.join(IMAGES_BASE, image_path)
+    to_ret = []
+    try:
+        for afile in os.listdir(complete_image_path):
+            print afile
+            to_ret.append("/images/:%s/:%s:%s/%s" %(city, city, placeid, afile))
+    except Exception, ex:
+        print ex
+    return to_ret
+
+
 def delete_index(es):
     try:
         if es.indices.exists(INDEX_NAME):
@@ -91,7 +106,7 @@ def format_hours(row):
         open_v = row.get(open_key)
         close_v = row.get(close_key)
         if open_key in row.keys() and close_key in row.keys() and open_v and close_v:
-            hours[day] = "%s - %s" % (time_in_12hour(open_v), time_in_12hour(close_v)) 
+            hours[day] = "%s - %s" % (time_in_12hour(open_v), time_in_12hour(close_v))
     return hours
 
 
@@ -157,11 +172,14 @@ if __name__ == '__main__':
                         otherdata[key] = row.get(key)
                 store['otherdata'] = otherdata
 
+                #set images
+                store['images'] = find_images(store['city'], store['placeid'])
+
                 print store
                 op_dict = {
                     "index": {
-                        "_index": INDEX_NAME, 
-                        "_type": TYPE_NAME, 
+                        "_index": INDEX_NAME,
+                        "_type": TYPE_NAME,
                         "_id": store[ID_FIELD]
                     }
                 }

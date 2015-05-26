@@ -1,55 +1,99 @@
-import json
+import os
 
 from werkzeug.wrappers import Request, Response
 
-from elasticsearch import Elasticsearch
+from werkzeug import cached_property
+from werkzeug.routing import Map
+from werkzeug.routing import Rule
+from werkzeug.wsgi import ClosingIterator
+from werkzeug.wsgi import SharedDataMiddleware
 
-ES_HOST = {"host" : "localhost", "port" : 9200}
-INDEX_NAME = 'place'
-TYPE_NAME = 'place'
-ID_FIELD = 'placeid'
+from handlers import welcome
+from handlers import search
+
+from middleware import ErrorMiddleware
+
+STATIC_PATH = os.path.join(os.path.dirname(__file__), 'static')
+STATIC_PATH = os.path.join('/Users/mafaq/Dropbox/', 'SnugabugPhotos')
+
+class SnugRequest(Request):
+    def __init__(self, *args, **kw):
+        Request.__init__(self, *args, **kw)
 
 
-@Request.application
-def application(request):
-	if request.url.endswith('favicon.ico'):
-		return Response('')
+class SnugabugApp(object):
 
-	lat = request.values.get('lat')
-	lon = request.values.get('lon')
+    def __init__(self):
+        pass
 
-	search_query = """{
-	  "query": {
-	    "filtered" : {
-	        "query" : {
-	            "match_all" : {}
-	        },
-	        "filter" : {
-	            "geo_distance" : {
-	                "distance" : "20km",
-	                "location" : {
-	                    "lat" : %s,
-	                    "lon" : %s
-	                }
-	            }
-	        }
-	    }
-	  }
-	}""" %(lat, lon)
-	print search_query
+    def __call__(self, environ, start_response):
+        return self.wsgi_app(environ, start_response)
 
-	es = Elasticsearch(hosts = [ES_HOST])
-	res = es.search(index = INDEX_NAME, size=10, body=search_query)
-	print "----------------------------------------------------"
-	print res
+    def wsgi_app(self, environ, start_response):
+        urls = self.url_map.bind_to_environ(environ)
+        endpoint, args = urls.match()
+        request = SnugRequest(environ)
+        response = endpoint(request, **args)
+        return ClosingIterator(response(environ, start_response), [])
 
-	resp = []
-	for hit in res['hits']['hits']:
-    		print(hit["_source"])
-		resp.append(hit["_source"])
-	return Response(json.dumps(resp))
+    @cached_property
+    def url_map(self):
+        return make_url_map()
+
+def make_url_map():
+    url_map = Map([
+        Rule('/',
+            endpoint=welcome,
+            strict_slashes=False),
+
+        Rule('/v1/search',
+            endpoint=search,
+            strict_slashes=False),
+
+        Rule('/favicon.ico', endpoint=lambda request: Response(status=404)),
+        Rule('/error.gif', endpoint=lambda request: Response(status=404)),
+        ])
+    return url_map
+
+
+def make_app(debug=False, with_static=True):
+    app = SnugabugApp()
+
+    if with_static:
+        app.wsgi_app = SharedDataMiddleware(
+            app.wsgi_app, {
+                '/images':  STATIC_PATH,
+            }
+            )
+
+    if debug:
+        from werkzeug.debug import DebuggedApplication
+        from wsgiref.validate import validator
+        app = DebuggedApplication(app, evalex=True)
+        app = validator(app)
+
+    return app
+
+
+def runserver(ip, port, debug=False):  # pragma: no cover
+    from cherrypy import wsgiserver
+    from werkzeug.serving import run_with_reloader
+
+    app = ErrorMiddleware(make_app(debug=debug))
+    server = wsgiserver.CherryPyWSGIServer((ip, port), app, numthreads=30)
+    run_with_reloader(server.start)
+
 
 if __name__ == '__main__':
-    from werkzeug.serving import run_simple
-    run_simple('localhost', 4000, application)
-
+    import argparse
+    parser = argparse.ArgumentParser(description='Sungabug v1.0')
+    parser.add_argument('ip', nargs='?', default='0.0.0.0',
+                        help="defaults to %(default)s")
+    parser.add_argument('-p', '--port', type=int, default=8080,
+                        help="defaults to %(default)s")
+    parser.add_argument('-d', '--debug', action='store_true', default=False,
+                        help="show traceback interpreter on error")
+    args = parser.parse_args()
+    runserver(args.ip, args.port, args.debug)
+else:
+    application = ErrorMiddleware(make_app())
