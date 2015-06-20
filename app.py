@@ -10,6 +10,7 @@ from werkzeug.wsgi import SharedDataMiddleware
 
 from handlers import welcome
 from handlers import search
+from handlers import collections
 
 from middleware import ErrorMiddleware
 
@@ -48,6 +49,10 @@ def make_url_map():
 
         Rule('/v1/search',
             endpoint=search,
+            strict_slashes=False),
+
+        Rule('/v1/collections',
+            endpoint=collections,
             strict_slashes=False),
 
         Rule('/favicon.ico', endpoint=lambda request: Response(status=404)),

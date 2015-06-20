@@ -15,12 +15,13 @@ ES_HOST = {"host" : "localhost", "port" : 9200}
 INDEX_NAME = 'place'
 TYPE_NAME = 'place'
 ID_FIELD = 'placeid'
-
+DATA_LOCATION = './data'
 
 IMAGES_BASE = os.path.join('/Users/mafaq/Dropbox/', 'SnugabugPhotos')
+IMAGES_BASE_URL = "http://52.24.145.215/snug/"
 
-def find_images(city, placeid):
-    image_path = ":%s/:%s:%s/" %(city, city, placeid)
+def find_images(city, placeid, placename):
+    image_path = "%s/%s_%s/" %(city, placeid, placename)
     complete_image_path = os.path.join(IMAGES_BASE, image_path)
     to_ret = []
     try:
@@ -64,7 +65,7 @@ def setup_index(es):
                     "category": {"type": "string"},
                     "hours": {"type": "object", "enabled": False},
                     "images": {"type": "object", "enabled" : False},
-                    "otherdata": {"type": "object", "enabled" : False}
+                    "otherdata": {"type": "nested", "enabled" : True}
                 }
             }
         }
@@ -111,48 +112,53 @@ def format_hours(row):
 
 
 def find_csv_files():
-    for afile in os.listdir('.'):
+    for afile in os.listdir(DATA_LOCATION):
         if afile.endswith('.csv'):
-	    print "************************"
-	    print afile
-	    print "***********************"
-            yield afile
+            yield DATA_LOCATION + '/' + afile
 
 
 if __name__ == '__main__':
     ## Initialize ES
     # create ES client, create index
-    es = Elasticsearch(hosts = [ES_HOST])
-    delete_index(es)
-    setup_index(es)
+    #es = Elasticsearch(hosts = [ES_HOST])
+    #delete_index(es)
+    #setup_index(es)
 
     for afile in find_csv_files():
-    	bulk_data = []
+        bulk_data = []
         print afile
+
         with open(afile, 'Ub') as csvfile:
             reader = csv.DictReader(csvfile)
-            #print reader.fieldnames
+            print reader.fieldnames
             for row in reader:
                 store = {}
-                place_name = row.get('Place Name', '').decode('ascii', errors='replace') or row.get('Name', '').decode('ascii', errors='replace')
+                place_name = (row.get('Place Name', '').decode('ascii', errors='replace')
+                        or row.get('Name', '').decode('ascii', errors='replace'))
                 if place_name in ('', None):
                     print "Empty line found"
                     continue
                 print place_name
-
-                store['placeid'] = make_placeid(place_name)
                 store['place'] = place_name
+
+                store['placeid'] = row.get('Place ID')
+                #store['placeid'] = make_placeid(place_name)
                 store['website'] = row.get('Website') or row.get('URL')
                 store['description'] = row.get('Description', '').decode('ascii', errors='replace')
 
-                location = dict(street=row.get('Address'), city=row.get('City'), region=row.get('State'), postcode=row.get('Zip'))
+                location = dict(
+                        street=row.get('Address'),
+                        city=row.get('City'),
+                        region=row.get('State'),
+                        postcode=row.get('Zip'))
                 try:
                     n_address = address_normalise(location)
                     store['street'] = n_address.get('street')
                     store['city'] = n_address.get('city')
                     store['state'] = n_address.get('state')
                     store['postal_code'] = n_address.get('postcode')
-                    store['location'] = {'lon': n_address.get('longitude'), 'lat': n_address.get('latitude')}
+                    store['location'] = {'lon': n_address.get('longitude'),
+                                            'lat': n_address.get('latitude')}
                     store['phone'] = row.get('Phone', '')
                     store['hours'] = format_hours(row)
                 except Exception, ex:
@@ -165,16 +171,17 @@ if __name__ == '__main__':
                 otherdata = {}
                 for key in row.keys():
                     if key not in ['Place Name', 'Name', 'Address', 'City', 'State', 'Zip', 'Phone', 'Website', 'Description']:
-                        if (key in ['Saturday Open', 'Sunday Open', 'Monday Open', 'Tuesday Open', 'Wednesday Open', 'Thursday Open', 'Friday Open']
-                            or key in ['Saturday Close', 'Sunday Close', 'Monday Close', 'Tuesday Close', 'Wednesday Close', 'Thursday Close', 'Friday Close']
+                        if (key in ['Saturday Open', 'Sunday Open', 'Monday Open', 'Tuesday Open',
+                                    'Wednesday Open', 'Thursday Open', 'Friday Open']
+                            or key in ['Saturday Close', 'Sunday Close', 'Monday Close', 'Tuesday Close',
+                                        'Wednesday Close', 'Thursday Close', 'Friday Close']
                             or key.startswith('Keyword')):
                             continue
                         otherdata[key] = row.get(key)
                 store['otherdata'] = otherdata
 
                 #set images
-                store['images'] = find_images(store['city'], store['placeid'])
-
+                store['images'] = find_images(store['city'], store['placeid'], make_placeid(place_name))
                 print store
                 op_dict = {
                     "index": {
@@ -186,14 +193,14 @@ if __name__ == '__main__':
 
                 bulk_data.append(op_dict)
                 bulk_data.append(store)
-	try:
-    		# bulk index the data
-    		print("bulk indexing...")
-    		res = es.bulk(index = INDEX_NAME, body = bulk_data, refresh = True)
-	except Exception, ex:
-		print "Failed to index: %s" % afile
+    try:
+        # bulk index the data
+        print("bulk indexing...")
+        res = es.bulk(index = INDEX_NAME, body = bulk_data, refresh = True)
+    except Exception, ex:
+        print "Failed to index: %s" % afile
 
-	print "One file done: %s ..." % afile
+    print "One file done: %s ..." % afile
 
     # sanity check
     res = es.search(index = INDEX_NAME, size=2, body={"query": {"match_all": {}}})
