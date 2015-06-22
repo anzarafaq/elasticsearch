@@ -22,7 +22,7 @@ def get_place_info(filter_by):
                 }
             }
 
-    _query["query"]["bool"]["must"].append({ "match": { "placeid": "%s" % filter_by }})
+    _query["query"]["bool"]["must"].append({ "match": { "placeid": "%s" % filter_by}})
     search_query = json.dumps(_query)
 
     print "-------------------------"
