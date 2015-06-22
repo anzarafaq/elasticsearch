@@ -113,6 +113,7 @@ def format_hours(row):
 
 def find_csv_files():
     for afile in os.listdir(DATA_LOCATION):
+    #for afile in ['museums.csv']:
         if afile.endswith('.csv'):
             yield DATA_LOCATION + '/' + afile
 
@@ -130,7 +131,6 @@ if __name__ == '__main__':
 
         with open(afile, 'Ub') as csvfile:
             reader = csv.DictReader(csvfile)
-            print reader.fieldnames
             for row in reader:
                 store = {}
                 place_name = (row.get('Place Name', '').decode('ascii', errors='replace')
@@ -138,11 +138,9 @@ if __name__ == '__main__':
                 if place_name in ('', None):
                     print "Empty line found"
                     continue
-                print place_name
                 store['place'] = place_name
 
                 store['placeid'] = row.get('Place ID')
-                #store['placeid'] = make_placeid(place_name)
                 store['website'] = row.get('Website') or row.get('URL')
                 store['description'] = row.get('Description', '').decode('ascii', errors='replace')
 
@@ -193,12 +191,12 @@ if __name__ == '__main__':
 
                 bulk_data.append(op_dict)
                 bulk_data.append(store)
-    try:
-        # bulk index the data
-        print("bulk indexing...")
-        res = es.bulk(index = INDEX_NAME, body = bulk_data, refresh = True)
-    except Exception, ex:
-        print "Failed to index: %s" % afile
+        try:
+            # bulk index the data
+            print("bulk indexing...")
+            res = es.bulk(index = INDEX_NAME, body = bulk_data, refresh = True)
+        except Exception, ex:
+            print "Failed to index: %s" % afile
 
     print "One file done: %s ..." % afile
 
