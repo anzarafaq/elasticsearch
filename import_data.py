@@ -120,9 +120,9 @@ def find_csv_files():
 if __name__ == '__main__':
     ## Initialize ES
     # create ES client, create index
-    #es = Elasticsearch(hosts = [ES_HOST])
-    #delete_index(es)
-    #setup_index(es)
+    es = Elasticsearch(hosts = [ES_HOST])
+    delete_index(es)
+    setup_index(es)
 
     for afile in find_csv_files():
         bulk_data = []
