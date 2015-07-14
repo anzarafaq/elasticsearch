@@ -200,7 +200,8 @@ def google_response_is_error(google_json):
 
 
 def _normalise(location):
-    #if (location.longitude not in ('', None, 0.0) and 
+    return location
+    #if (location.longitude not in ('', None, 0.0) and
     #    location.latitude not in ('', None, 0.0)):
     #    return True, location
 

@@ -3,6 +3,8 @@ import csv
 
 from elasticsearch import Elasticsearch
 from werkzeug.wrappers import Response
+from bookmarks_handler import add_bookmarks, get_bookmarks
+
 
 ES_HOST = {"host" : "localhost", "port" : 9200}
 INDEX_NAME = 'place'
@@ -37,12 +39,18 @@ def get_place_info(filter_by):
         print(hit["_source"])
         resp.append(hit["_source"])
 
-    return json.dumps(resp)
+    return resp
 
 
 def welcome(request):
     return Response("Snugabug!")
 
+
+def bookmarks(request):
+    if request.method == 'POST':
+        return add_bookmarks(request)
+    elif request.method == 'GET':
+        return get_bookmarks(request)
 
 def collections(request):
     if _collections:
@@ -76,23 +84,26 @@ def search(request):
             "query": {
                 "bool": {
                     "must": [
-                        {
+                        ]
+                    }
+                }
+            }
+
+
+    if lat and lon:
+        _query["query"]["bool"]["must"].append({
                             "filtered" : {
                                 "query" : {
                                     "match_all" : {}
                                     },
                                 "filter" : {
                                     "geo_distance" : {
-                                        "distance" : "20km",
+                                        "distance" : "2km",
                                         "location" : {
                                             "lat" : lat,
                                             "lon" : lon
                                             }}}}
-                                        }
-                        ]
-                    }
-                }
-            }
+                                        })
 
     keywords = request.values.get('keywords', None)
     if keywords:
@@ -118,7 +129,7 @@ def search(request):
     print "-------------------------"
 
     es = Elasticsearch(hosts = [ES_HOST])
-    res = es.search(index = INDEX_NAME, size=10, body=search_query)
+    res = es.search(index = INDEX_NAME, size=50, body=search_query)
     print "----------------------------------------------------"
     print res
     print "----------------------------------------------------"
