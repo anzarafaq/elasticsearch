@@ -17,7 +17,7 @@ TYPE_NAME = 'place'
 ID_FIELD = 'placeid'
 DATA_LOCATION = './data'
 
-IMAGES_BASE = os.path.join('/Users/mafaq/Dropbox/', 'SnugabugPhotos')
+IMAGES_BASE = '/data/'
 IMAGES_BASE_URL = "http://52.24.145.215/snug/"
 
 def find_images(city, placeid, placename):
@@ -50,10 +50,11 @@ def find_images_old(city, placeid, placename):
 
 def delete_index(es):
     try:
-        if es.indices.exists(INDEX_NAME):
-            print("deleting '%s' index..." % (INDEX_NAME))
-            res = es.indices.delete(index = INDEX_NAME)
-            print(" response: '%s'" % (res))
+	for index_name in ('place', 'bookmarks'):
+        	if es.indices.exists(index_name):
+        	    print("deleting '%s' index..." % (index_name))
+        	    res = es.indices.delete(index = index_name)
+        	    print(" response: '%s'" % (res))
     except Exception, ex:
         print ex
 
@@ -97,24 +98,6 @@ def setup_index(es):
                 "number_of_replicas": 0
                 },
             "mappings": {
-                "place": {
-                    "properties": {
-                        "placeid": {"type": "string"},
-                        "place": {"type": "string"},
-                        "website": {"type": "string"},
-                        "description": {"type": "string"},
-                        "street": {"type": "string"},
-                        "city": {"type": "string"},
-                        "state": {"type": "string"},
-                        "postal_code": {"type": "string"},
-                        "phone": {"type": "string"},
-                        "location": {"type": "geo_point"},
-                        "category": {"type": "string"},
-                        "hours": {"type": "object", "enabled": False},
-                        "images": {"type": "object", "enabled" : False},
-                        "otherdata": {"type": "nested", "enabled" : True}
-                        }
-                    },
                 "bookmark": {
                     "properties": {
                         "deviceid": {"type": "string"},
@@ -150,6 +133,7 @@ def time_in_12hour(timevalue_24hour):
 
     t = time.strptime(timevalue_24hour, "%H:%M")
     return time.strftime( "%I:%M%p", t )
+
 
 def format_hours(row):
     hours = {}
@@ -214,6 +198,7 @@ if __name__ == '__main__':
                     store['location'] = {'lon': n_address.get('longitude'),
                                             'lat': n_address.get('latitude')}
                     store['phone'] = row.get('Phone', '')
+                    store['category'] = row.get('Category', '')
                     store['hours'] = format_hours(row)
                 except Exception, ex:
                     print ex
@@ -225,7 +210,7 @@ if __name__ == '__main__':
                 otherdata = {}
                 for key in row.keys():
                     if key not in ['Place Name', 'Name', 'Address', 'City',\
-                            'State', 'Zip', 'Phone', 'Website', 'Description']:
+                            'State', 'Zip', 'Phone', 'Website', 'Description', 'Category']:
                         if (key in ['Saturday Open', 'Sunday Open', 'Monday Open', 'Tuesday Open',
                                     'Wednesday Open', 'Thursday Open', 'Friday Open']
                             or key in ['Saturday Close', 'Sunday Close', 'Monday Close', 'Tuesday Close',
