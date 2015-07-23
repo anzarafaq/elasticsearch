@@ -29,7 +29,7 @@ def find_images(city, placeid, placename):
                 complete_image_path = os.path.join(city_image_path, adir)
                 for afile in os.listdir(complete_image_path):
                     file_path = os.path.join(complete_image_path, afile)
-                    to_ret.append("/images%s" %(file_path))
+                    to_ret.append(("/images%s" %(file_path)).replace("/data/", "/"))
     except Exception, ex:
         print ex
     return to_ret

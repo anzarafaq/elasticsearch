@@ -12,6 +12,7 @@ from handlers import welcome
 from handlers import search
 from handlers import collections
 from handlers import bookmarks
+from handlers import category_name_filter
 
 from middleware import ErrorMiddleware
 
@@ -58,6 +59,10 @@ def make_url_map():
 
         Rule('/v1/bookmarks',
             endpoint=bookmarks,
+            strict_slashes=False),
+
+        Rule('/v1/category_name_filter',
+            endpoint=category_name_filter,
             strict_slashes=False),
 
         Rule('/favicon.ico', endpoint=lambda request: Response(status=404)),

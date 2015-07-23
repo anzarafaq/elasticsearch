@@ -1,0 +1,14 @@
+[
+       {"Display Filter": "Amusement Parks", "Endpoint Value": "Amusement Parks"}, 
+       {"Display Filter": "Aquariums, Zoos, Farms & Nature Parks", "Endpoint Value": "Aquariums|Zoos|Farms%20&%20Nature%20Parks"}, 
+       {"Display Filter": "Indoor Playspaces", "Endpoint Value": "Indoor Playspaces"}, 
+       {"Display Filter": "Amusement Parks", "Endpoint Value": "Amusement Parks"}, 
+       {"Display Filter": "Museums", "Endpoint Value": "Museums"}, 
+       {"Display Filter": "Parent and Support Groups", "Endpoint Value": "Parent and Support Groups"}, 
+       {"Display Filter": "Playgrounds", "Endpoint Value": "Playgrounds"}, 
+       {"Display Filter": "Seasonal", "Endpoint Value": "Seasonal"}, 
+       {"Display Filter": "Stores", "Endpoint Value": "Stores"}, 
+       {"Display Filter": "Tours", "Endpoint Value": "Tours"}, 
+       {"Display Filter": "Trains, Planes & Automobiles", "Endpoint Value": "Trains|Planes%20&%20Automobiles"}, 
+       {"Display Filter": "Wineries", "Endpoint Value": "Wineries"}
+]
