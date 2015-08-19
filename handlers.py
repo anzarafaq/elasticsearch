@@ -1,6 +1,8 @@
 import json
 import csv
 import os
+from bson import json_util
+from datetime import datetime
 
 from elasticsearch import Elasticsearch
 from werkzeug.wrappers import Response
@@ -12,7 +14,7 @@ INDEX_NAME = 'place'
 TYPE_NAME = 'place'
 ID_FIELD = 'placeid'
 
-_collections = {}
+_collections = []
 
 
 def get_place_info(filter_by):
@@ -26,6 +28,10 @@ def get_place_info(filter_by):
             }
 
     _query["query"]["bool"]["must"].append({"match": {"placeid": "%s" % filter_by}})
+
+    #import pprint
+    #pprint.pprint(_query)
+
     search_query = json.dumps(_query)
     es = Elasticsearch(hosts = [ES_HOST])
     res = es.search(index=INDEX_NAME, size=10, body=search_query)
@@ -55,34 +61,57 @@ def category_name_filter(request):
 
 
 def collections(request):
+    global _collections
     if _collections:
         print "From cache"
         return Response(json.dumps(_collections))
 
+    tmp_collections = []
     reader = csv.reader(open('data/collections/collections.csv', 'rUb'))
     count = 0
-    place_ids = []
     for row in reader:
         if count == 0:
             count += 1
             continue
-        cid = row[0]
-        _collections[cid] = {}
-        _collections[cid]['title'] = row[1]
-        _collections[cid]['description'] = row[2]
-        _collections[cid]['places'] = []
+        coll = {}
+        coll['f_date'] = datetime.strptime(row[1], '%m/%d/%Y')
+        coll[row[0]] = {}
+        coll[row[0]]['date'] = row[1]
+        coll[row[0]]['title'] = row[2]
+        coll[row[0]]['description'] = row[3]
+        coll[row[0]]['places'] = []
 
-        for item in row[3:]:
+        place_ids = []
+        for item in row[4:]:
             if item.strip() not in ('', None):
-                _collections[cid]['places'].append(get_place_info(item))
-    return Response(json.dumps(_collections))
+                place_ids.append('placeid:' + item)
+                #coll[row[0]]['places'].append(get_place_info(item))
+
+        query_string = ','.join(place_ids)
+        print query_string
+        search = _search(filter_by=query_string)
+        _collections.append(coll)
+
+    _collections.sort(key=lambda r: r['f_date'])
+    for dic in _collections:
+        del dic['f_date']
+
+    #import pprint
+    #pprint.pprint( _collections )
+    return Response(json.dumps(_collections, default=json_util.default))
 
 
 def search(request):
     lat = request.values.get('lat')
     lon = request.values.get('lon')
-    radius = request.values.get('radius', "2")
+    radius = request.values.get('radius', "80")
+    keywords = request.values.get('keywords', None)
+    filter_by = request.values.get('filter_by')
 
+    resp = _search(lat, lon, radius, keywords, filter_by)
+    return Response(json.dumps(resp))
+
+def _search(lat=None, lon=None, radius=None, keywords=None, filter_by=None):
     _query = {
             "query": {
                 "bool": {
@@ -141,7 +170,6 @@ def search(request):
                             }}}}
                         })
 
-    keywords = request.values.get('keywords', None)
     if keywords:
         keywords = keywords.split(',')
         nested = { "nested": {
@@ -152,7 +180,6 @@ def search(request):
                     {"match": {"otherdata.%s" % keyword.strip() : "Y"}})
         _query["query"]["bool"]["must"].append(nested)
 
-    filter_by = request.values.get('filter_by')
     if filter_by:
         filter_by = filter_by.split(',')
         for fb in filter_by:
@@ -160,7 +187,8 @@ def search(request):
             _query["query"]["bool"]["must"].append({"match": {"%s" % fbk: "%s" % fbv}})
 
     search_query = json.dumps(_query)
-
+    import pprint
+    pprint.pprint(search_query)
     es = Elasticsearch(hosts = [ES_HOST])
     res = es.search(index = INDEX_NAME, size=50, body=search_query)
 
@@ -171,5 +199,4 @@ def search(request):
         if lat and lon:
             result["distance"] = hit.get('fields').get('distance')[0] * 0.621371 ## Miles
         resp.append(result)
-
-    return Response(json.dumps(resp))
+    return resp
