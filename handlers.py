@@ -8,7 +8,6 @@ from elasticsearch import Elasticsearch
 from werkzeug.wrappers import Response
 from bookmarks_handler import add_bookmarks, get_bookmarks
 
-
 ES_HOST = {"host" : "localhost", "port" : 9200}
 INDEX_NAME = 'place'
 TYPE_NAME = 'place'
@@ -28,9 +27,6 @@ def get_place_info(filter_by):
             }
 
     _query["query"]["bool"]["must"].append({"match": {"placeid": "%s" % filter_by}})
-
-    #import pprint
-    #pprint.pprint(_query)
 
     search_query = json.dumps(_query)
     es = Elasticsearch(hosts = [ES_HOST])
@@ -61,6 +57,9 @@ def category_name_filter(request):
 
 
 def collections(request):
+    lat = request.values.get('lat')
+    lon = request.values.get('lon')
+
     global _collections
     if _collections:
         print "From cache"
@@ -84,20 +83,17 @@ def collections(request):
         place_ids = []
         for item in row[4:]:
             if item.strip() not in ('', None):
-                place_ids.append('placeid:' + item)
-                #coll[row[0]]['places'].append(get_place_info(item))
+                place_ids.append(item)
 
-        query_string = ','.join(place_ids)
-        print query_string
-        search = _search(filter_by=query_string)
+        query_string = 'placeid:' + ','.join(place_ids)
+        search = _search(lat, lon, filter_by=query_string)
+        coll[row[0]]['places'] = search
         _collections.append(coll)
 
     _collections.sort(key=lambda r: r['f_date'])
     for dic in _collections:
         del dic['f_date']
 
-    #import pprint
-    #pprint.pprint( _collections )
     return Response(json.dumps(_collections, default=json_util.default))
 
 
@@ -111,7 +107,7 @@ def search(request):
     resp = _search(lat, lon, radius, keywords, filter_by)
     return Response(json.dumps(resp))
 
-def _search(lat=None, lon=None, radius=None, keywords=None, filter_by=None):
+def _search(lat=None, lon=None, radius=80, keywords=None, filter_by=None):
     _query = {
             "query": {
                 "bool": {
@@ -181,14 +177,10 @@ def _search(lat=None, lon=None, radius=None, keywords=None, filter_by=None):
         _query["query"]["bool"]["must"].append(nested)
 
     if filter_by:
-        filter_by = filter_by.split(',')
-        for fb in filter_by:
-            fbk, fbv = fb.split(':')
-            _query["query"]["bool"]["must"].append({"match": {"%s" % fbk: "%s" % fbv}})
+        fbk, fbv = filter_by.split(':')
+        _query["query"]["bool"]["must"].append({"match": {"%s" % fbk: "%s" % fbv}})
 
     search_query = json.dumps(_query)
-    import pprint
-    pprint.pprint(search_query)
     es = Elasticsearch(hosts = [ES_HOST])
     res = es.search(index = INDEX_NAME, size=50, body=search_query)
 
