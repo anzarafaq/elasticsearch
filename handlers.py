@@ -1,7 +1,7 @@
 import json
 import csv
 import os
-from bson import json_util
+#from bson import json_util
 from datetime import datetime
 
 from elasticsearch import Elasticsearch
@@ -94,7 +94,7 @@ def collections(request):
     for dic in _collections:
         del dic['f_date']
 
-    return Response(json.dumps(_collections, default=json_util.default))
+    return Response(json.dumps(_collections))#, default=json_util.default))
 
 
 def search(request):
@@ -178,7 +178,9 @@ def _search(lat=None, lon=None, radius=80, keywords=None, filter_by=None):
 
     if filter_by:
         fbk, fbv = filter_by.split(':')
-        _query["query"]["bool"]["must"].append({"match": {"%s" % fbk: "%s" % fbv}})
+        if fbk and fbv:
+            _query["query"]["bool"]["must"].append(
+                    {"match": {"%s" % fbk: "%s" % fbv}})
 
     search_query = json.dumps(_query)
     es = Elasticsearch(hosts = [ES_HOST])

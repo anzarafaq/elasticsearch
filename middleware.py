@@ -10,7 +10,7 @@ from werkzeug import Response as APIResponse
 from werkzeug.exceptions import BadRequest
 from werkzeug.exceptions import InternalServerError
 
-logger = getLogger('milo_logger')
+logger = getLogger()
 
 
 class ErrorMiddleware(object):
