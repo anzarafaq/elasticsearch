@@ -11,6 +11,7 @@ import re
 import json
 import urllib2
 import os
+import time
 
 from werkzeug import url_encode
 from urlparse import ParseResult, urlunparse
@@ -200,8 +201,7 @@ def google_response_is_error(google_json):
 
 
 def _normalise(location):
-    #return location
-    #if (location.longitude not in ('', None, 0.0) and
+    #if (location.longitude not in ('', None, 0.0) and 
     #    location.latitude not in ('', None, 0.0)):
     #    return True, location
 
@@ -216,6 +216,7 @@ def _normalise(location):
         normalized_address = crack_address(address)
         #print normalized_address
     except Exception, ex:
+	print ex
         raise Exception("Unable to geocode address: %s" % address)
 
     if type(normalized_address) == type(list()):

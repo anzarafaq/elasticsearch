@@ -14,10 +14,16 @@ from handlers import collections
 from handlers import bookmarks
 from handlers import category_name_filter
 
+#v2
+from handlers import collections_v2
+from handlers import category_name_filter_v2
+from handlers import events
+
 from middleware import ErrorMiddleware
 
 STATIC_PATH = os.path.join(os.path.dirname(__file__), 'static')
-STATIC_PATH = os.path.join('/Users/mafaq/Dropbox/', 'SnugabugPhotos')
+#STATIC_PATH = os.path.join('/Users/mafaq/Dropbox/', 'SnugabugPhotos')
+STATIC_PATH = '/data/'
 
 class SnugRequest(Request):
     def __init__(self, *args, **kw):
@@ -65,6 +71,27 @@ def make_url_map():
             endpoint=category_name_filter,
             strict_slashes=False),
 
+        #V2
+        Rule('/v2/search',
+            endpoint=search,
+            strict_slashes=False),
+
+        Rule('/v2/collections',
+            endpoint=collections_v2,
+            strict_slashes=False),
+
+        Rule('/v2/bookmarks',
+            endpoint=bookmarks,
+            strict_slashes=False),
+
+        Rule('/v2/category_name_filter',
+            endpoint=category_name_filter_v2,
+            strict_slashes=False),
+
+        Rule('/v2/events',
+            endpoint=events,
+            strict_slashes=False),
+
         Rule('/favicon.ico', endpoint=lambda request: Response(status=404)),
         Rule('/error.gif', endpoint=lambda request: Response(status=404)),
         ])
@@ -104,7 +131,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sungabug v1.0')
     parser.add_argument('ip', nargs='?', default='0.0.0.0',
                         help="defaults to %(default)s")
-    parser.add_argument('-p', '--port', type=int, default=8080,
+    parser.add_argument('-p', '--port', type=int, default=80,
                         help="defaults to %(default)s")
     parser.add_argument('-d', '--debug', action='store_true', default=False,
                         help="show traceback interpreter on error")

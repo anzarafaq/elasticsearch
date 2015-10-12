@@ -4,7 +4,6 @@ import time
 
 from elasticsearch import Elasticsearch
 from geocode import _normalise as address_normalise
-from aws_images import get_image_locations
 
 
 """
@@ -12,7 +11,6 @@ So we have address as the index filed, with may be description as well
 other information is just OTHER data
 """
 
-IMAGE_LOCATIONS = get_image_locations()
 ES_HOST = {"host" : "localhost", "port" : 9200}
 INDEX_NAME = 'place'
 TYPE_NAME = 'place'
@@ -22,18 +20,13 @@ DATA_LOCATION = './data'
 IMAGES_BASE = '/data/'
 IMAGES_BASE_URL = "http://52.24.145.215/snug/"
 
-
-def find_images(placeid):
-	return IMAGE_LOCATIONS.get(placeid, [])
-
-
-def find_images_deprecated(city, placeid, placename):
+def find_images(city, placeid, placename):
     to_ret = []
     city_image_path = os.path.join(IMAGES_BASE, city.strip().replace(' ', ''))
     try:
         for adir in os.listdir(city_image_path):
             # _ to avoid situations like PLA1_ and PLA123_
-            if adir.startswith(placeid + '_'):
+            if adir.startswith(placeid + '_'): 
                 complete_image_path = os.path.join(city_image_path, adir)
                 for afile in os.listdir(complete_image_path):
                     file_path = os.path.join(complete_image_path, afile)
@@ -160,8 +153,8 @@ def format_hours(row):
 
 
 def find_csv_files():
-    for afile in os.listdir(DATA_LOCATION):
-    #for afile in ['restaurants.csv']:
+    #for afile in os.listdir(DATA_LOCATION):
+    for afile in ['stores.csv', 'playgrounds.csv']:
         if afile.endswith('.csv'):
             yield DATA_LOCATION + '/' + afile
 
@@ -170,8 +163,8 @@ if __name__ == '__main__':
     ## Initialize ES
     # create ES client, create index
     es = Elasticsearch(hosts = [ES_HOST])
-    delete_index(es)
-    setup_index(es)
+    #delete_index(es)
+    #setup_index(es)
 
     for afile in find_csv_files():
         bulk_data = []
@@ -230,7 +223,7 @@ if __name__ == '__main__':
                 store['otherdata'] = otherdata
 
                 #set images
-                store['images'] = find_images(store['placeid'])
+                store['images'] = find_images(store['city'], store['placeid'], make_placeid(place_name))
                 #print store
                 op_dict = {
                     "index": {
@@ -254,9 +247,9 @@ if __name__ == '__main__':
     print "One file done: %s ..." % afile
 
     # sanity check
-    res = es.search(index = INDEX_NAME, size=2, body={"query": {"match_all": {}}})
-    print(" response: '%s'" % (res))
+    #res = es.search(index = INDEX_NAME, size=2, body={"query": {"match_all": {}}})
+    #print(" response: '%s'" % (res))
 
-    print("results:")
-    for hit in res['hits']['hits']:
-        print(hit["_source"])
+    #print("results:")
+    #for hit in res['hits']['hits']:
+    #    print(hit["_source"])
